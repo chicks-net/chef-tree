@@ -1,0 +1,93 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+my $prev_depth = -1;
+my (@parents, %seen, @connections);
+
+print "digraph chefdeps {\n";
+
+# read deps from STDIN
+while (my $line = <STDIN>) {
+	my $depth = 0;
+	if ( $line =~ s/^(\s+)// ) {
+		my $spaces = $1;
+		$depth = length($spaces) / 2;
+	}
+
+	my $chef_object = $line;
+	chomp($chef_object);
+	my $raw_name = $chef_object;
+
+	my $obj_meta = rename_object($chef_object);
+	$chef_object = $obj_meta->{name};
+	unless ($seen{ $raw_name }) {
+		my $shape = $obj_meta->{shape} || 'ellipse';
+		my $color = $obj_meta->{edge_color} || 'black';
+		print "\t\"$chef_object\" [shape=$shape, color=$color]\n";
+		$seen{$raw_name} = 1;
+	}
+
+	$parents[$depth] = $obj_meta;
+
+	if ($depth) {
+		# not root
+		my $parent_meta = $parents[$depth-1];
+		my $parent = $parent_meta->{name};
+		my $color = "black";
+		if ($parent_meta->{type} eq 'role') {
+			$color = 'blue';
+		} elsif ($parent_meta->{type} eq 'cookbook') {
+			$color = 'yellow';
+			if ($parent =~ /^tm_/) {
+				$color = 'orange';
+			} else {
+				$color = 'green';
+			}
+		}
+		push(@connections, "\t\"$parent\" -> \"$chef_object\" [color=$color]\n");
+	}
+}
+
+print "\n"; # blank line
+print @connections;
+print "}\n"; # close digraph
+
+# role = blue box
+# internal cookbook = red box
+# community cookbook = green circle
+
+sub rename_object {
+	my($raw_name) = @_;
+
+	my %return;
+
+	if ($raw_name =~ /^roles\//) {
+		my $name = $raw_name;
+		$name =~ s/^roles\///;
+		$return{name} = $name;
+		$return{type} = 'role';
+		$return{shape} = 'box';
+		$return{edge_color} = 'blue';
+	} elsif ($raw_name =~ /^cookbooks\/tm_/) {
+		my $name = $raw_name;
+		$name =~ s/^cookbooks\///;
+		$return{name} = $name;
+		$return{type} = 'cookbook';
+		$return{shape} = 'box';
+		$return{edge_color} = 'red';
+	} elsif ($raw_name =~ /^cookbooks\//) {
+		my $name = $raw_name;
+		$name =~ s/^cookbooks\///;
+		$return{name} = $name;
+		$return{type} = 'cookbook';
+		$return{shape} = 'ellipse';
+		$return{edge_color} = 'green';
+	} else {
+		$return{name} = $raw_name;
+		$return{type} = 'unknown';
+	}
+
+	return \%return;
+}
