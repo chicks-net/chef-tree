@@ -4,7 +4,7 @@ chef dependencies in a tree
 
 ## usage
 
-	knife deps FOO | chefdeps2tree > chef.dot
+	knife deps roles/FOO.json --remote --tree | chefdeps2tree > chef.dot
 	dot -Tpng chef.dot > chef.png
 
 ## requires
