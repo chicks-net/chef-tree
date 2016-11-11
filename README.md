@@ -10,4 +10,5 @@ chef dependencies in a tree
 ## requires
 
 * perl 5
+* graphviz
 * `knife` configured to work with your cookbooks
